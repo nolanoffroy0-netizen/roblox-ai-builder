@@ -87,4 +87,28 @@ export default async function handler(req, res) {
 
     let parsed;
     try {
-      const
+      const cleaned = rawText.replace(/```json|```/g, "").trim();
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
+      return res.status(502).json({ error: "Reponse IA non parsable", raw: rawText });
+    }
+
+    if (!Array.isArray(parsed.instances)) {
+      return res.status(502).json({ error: "Reponse IA invalide: 'instances' manquant", raw: rawText });
+    }
+
+    const command = {
+      id: Date.now().toString(),
+      instruction,
+      explication: parsed.explication,
+      instances: parsed.instances,
+      created_at: new Date().toISOString(),
+    };
+
+    await setPendingCommand(command);
+
+    return res.status(200).json({ ok: true, command });
+  } catch (err) {
+    return res.status(500).json({ error: "Erreur serveur", detail: String(err) });
+  }
+}
