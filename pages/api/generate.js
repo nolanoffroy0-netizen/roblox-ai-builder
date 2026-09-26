@@ -40,9 +40,10 @@ Regles importantes :
 - Pour BrickColor, utilise le nom Roblox standard en string (ex: "Bright blue", "Really black").
 - Pour un Script/LocalScript/ModuleScript qui doit executer du code, mets le code Luau complet dans la propriete "Source", avec de vrais "\\n" pour les retours a la ligne.
 - Si une Part doit avoir un script a l'interieur (comportement local a cette part), mets le path du script sous celui de la part (ex: Workspace/Porte puis Workspace/Porte/ScriptOuverture), le script utilisera alors script.Parent pour reference la part.
-- Ne mets jamais de commentaires ou de texte hors du JSON.`;
+- Ne mets jamais de commentaires ou de texte hors du JSON.
+- Reponds avec UNIQUEMENT le JSON, rien d'autre, pas de phrase d'introduction, pas de balises markdown.`;
 
-const GROQ_MODEL = "openai/gpt-oss-120b";
+const OPENROUTER_MODEL = "deepseek/deepseek-chat-v3-0324:free";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -54,22 +55,21 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Le champ 'instruction' est requis" });
   }
 
-  if (!process.env.GROQ_API_KEY) {
-    return res.status(500).json({ error: "GROQ_API_KEY manquante sur le serveur" });
+  if (!process.env.OPENROUTER_API_KEY) {
+    return res.status(500).json({ error: "OPENROUTER_API_KEY manquante sur le serveur" });
   }
 
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model: OPENROUTER_MODEL,
         temperature: 0.4,
         max_tokens: 3000,
-        response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: instruction },
@@ -79,7 +79,7 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const errText = await response.text();
-      return res.status(502).json({ error: "Erreur API Groq", detail: errText });
+      return res.status(502).json({ error: "Erreur API OpenRouter", detail: errText });
     }
 
     const data = await response.json();
