@@ -8,9 +8,10 @@
     Ce plugin :
     1. Interroge regulierement ton site (GET /api/commands) pour voir s'il y a
        une nouvelle commande a executer.
-    2. Cree/modifie le script Luau demande dans le jeu ouvert dans Studio.
-    3. Renvoie le resultat (succes/erreur + un resume du contenu du jeu) vers
-       ton site (POST /api/status).
+    2. Cree les instances demandees (Part, Model, Script, Sound, etc, avec
+       leurs proprietes) dans le jeu ouvert dans Studio.
+    3. Renvoie le resultat (succes/erreur + un resume) vers ton site
+       (POST /api/status).
 
     IMPORTANT :
     - Il faut activer "Allow HTTP Requests" dans
@@ -59,7 +60,8 @@ local function sendStatus(commandId, success, message, gameContent)
     end
 end
 
--- Resout un chemin type "ServerScriptService/Dossier/Nom" en (parent, nom)
+-- Resout un chemin type "Workspace/Dossier/Nom" en (parent, nom).
+-- Cree les dossiers/models intermediaires manquants au passage.
 local function resolveParent(path)
     local parts = string.split(path, "/")
     local name = table.remove(parts, #parts)
@@ -68,9 +70,16 @@ local function resolveParent(path)
     for _, part in ipairs(parts) do
         local child = current:FindFirstChild(part)
         if not child then
-            child = Instance.new("Folder")
-            child.Name = part
-            child.Parent = current
+            local okService, service = pcall(function()
+                return game:GetService(part)
+            end)
+            if okService and service then
+                child = service
+            else
+                child = Instance.new("Folder")
+                child.Name = part
+                child.Parent = current
+            end
         end
         current = child
     end
@@ -78,31 +87,63 @@ local function resolveParent(path)
     return current, name
 end
 
-local function executeCommand(command)
+-- Applique une propriete en convertissant les types courants
+-- (Vector3, Color3, BrickColor, Material) depuis le JSON recu.
+local function applyProperty(instance, propName, value)
     local ok, err = pcall(function()
-        local parent, name = resolveParent(command.instance_path)
-
-        -- Supprime l'ancien script du meme nom s'il existe, pour le remplacer
-        local existing = parent:FindFirstChild(name)
-        if existing then
-            existing:Destroy()
+        if type(value) == "table" and value.x ~= nil and value.y ~= nil and value.z ~= nil then
+            instance[propName] = Vector3.new(value.x, value.y, value.z)
+        elseif type(value) == "table" and value.r ~= nil and value.g ~= nil and value.b ~= nil then
+            instance[propName] = Color3.new(value.r, value.g, value.b)
+        elseif propName == "BrickColor" and type(value) == "string" then
+            instance.BrickColor = BrickColor.new(value)
+        elseif propName == "Material" and type(value) == "string" then
+            instance.Material = Enum.Material[value]
+        else
+            instance[propName] = value
         end
+    end)
 
-        local scriptInstance = Instance.new(command.script_type or "Script")
-        scriptInstance.Name = name
-        scriptInstance.Source = command.code
-        scriptInstance.Parent = parent
+    if not ok then
+        warn("[AI Builder] Impossible d'appliquer la propriete", propName, ":", err)
+    end
+end
+
+local function createInstance(instDef)
+    local parent, name = resolveParent(instDef.path)
+
+    local existing = parent:FindFirstChild(name)
+    if existing then
+        existing:Destroy()
+    end
+
+    local newInstance = Instance.new(instDef.class_name)
+    newInstance.Name = name
+
+    if instDef.properties then
+        for propName, value in pairs(instDef.properties) do
+            applyProperty(newInstance, propName, value)
+        end
+    end
+
+    newInstance.Parent = parent
+
+    return newInstance
+end
+
+local function executeCommand(command)
+    local created = {}
+    local ok, err = pcall(function()
+        for _, instDef in ipairs(command.instances or {}) do
+            local inst = createInstance(instDef)
+            table.insert(created, inst:GetFullName())
+        end
     end)
 
     if ok then
-        local summary = {
-            instance_path = command.instance_path,
-            script_type = command.script_type,
-            explication = command.explication,
-        }
-        sendStatus(command.id, true, "Script cree/mis a jour avec succes.", summary)
+        sendStatus(command.id, true, "Instances creees avec succes.", { created = created, explication = command.explication })
     else
-        sendStatus(command.id, false, "Erreur lors de la creation du script : " .. tostring(err), nil)
+        sendStatus(command.id, false, "Erreur lors de la creation : " .. tostring(err), { created = created })
     end
 end
 
