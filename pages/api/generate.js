@@ -38,12 +38,12 @@ Regles importantes :
 - Pour les proprietes de type Vector3 (Size, Position), utilise {"x":.., "y":.., "z":..}.
 - Pour Color3, utilise {"r":.., "g":.., "b":..} avec des valeurs entre 0 et 1.
 - Pour BrickColor, utilise le nom Roblox standard en string (ex: "Bright blue", "Really black").
-- Pour un Script/LocalScript/ModuleScript qui doit executer du code, mets le code Luau complet dans la propriete "Source", avec de vrais "\n" pour les retours a la ligne.
+- Pour un Script/LocalScript/ModuleScript qui doit executer du code, mets le code Luau complet dans la propriete "Source", avec de vrais "\\n" pour les retours a la ligne.
 - Si une Part doit avoir un script a l'interieur (comportement local a cette part), mets le path du script sous celui de la part (ex: Workspace/Porte puis Workspace/Porte/ScriptOuverture), le script utilisera alors script.Parent pour reference la part.
 - Ne mets jamais de commentaires ou de texte hors du JSON.
 - Reponds avec UNIQUEMENT le JSON, rien d'autre, pas de phrase d'introduction, pas de balises markdown.`;
 
-const OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+const OPENROUTER_MODEL = "openrouter/free";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
