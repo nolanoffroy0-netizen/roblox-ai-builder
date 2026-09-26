@@ -43,7 +43,7 @@ Regles importantes :
 - Ne mets jamais de commentaires ou de texte hors du JSON.
 - Reponds avec UNIQUEMENT le JSON, rien d'autre, pas de phrase d'introduction, pas de balises markdown.`;
 
-const OPENROUTER_MODEL = "deepseek/deepseek-chat-v3-0324:free";
+const OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -111,4 +111,3 @@ export default async function handler(req, res) {
   } catch (err) {
     return res.status(500).json({ error: "Erreur serveur", detail: String(err) });
   }
-}
