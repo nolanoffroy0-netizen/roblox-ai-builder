@@ -10,7 +10,7 @@ Reponds UNIQUEMENT avec un objet JSON valide, sans texte autour, sans balises ma
   "code": "le code Luau complet, en texte brut avec des \\n pour les retours a la ligne"
 }`;
 
-const GROQ_MODEL = "llama-3.1-8b-instant";
+const GROQ_MODEL = "openai/gpt-oss-120b";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
