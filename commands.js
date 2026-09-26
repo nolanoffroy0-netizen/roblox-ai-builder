@@ -70,3 +70,9 @@ export async function getVerification(userId) {
 export async function clearVerification(userId) {
   await del(`verify:${userId}`);
 }
+function checkSecret(req) {
+  const auth = req.headers["x-site-secret"];
+  console.log("RECU:", JSON.stringify(auth));
+  console.log("ATTENDU:", JSON.stringify(process.env.SITE_SECRET));
+  return auth && auth === process.env.SITE_SECRET;
+}
