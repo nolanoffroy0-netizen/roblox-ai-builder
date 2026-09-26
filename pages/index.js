@@ -75,8 +75,16 @@ export default function Home() {
           <div style={styles.card}>
             <h3>Commande envoyee</h3>
             <p><strong>Explication :</strong> {lastCommand.explication}</p>
-            <p><strong>Emplacement :</strong> {lastCommand.instance_path} ({lastCommand.script_type})</p>
-            <pre style={styles.code}>{lastCommand.code}</pre>
+            {lastCommand.instances?.map((inst, i) => (
+              <div key={i} style={{ marginBottom: 12 }}>
+                <p>
+                  <strong>{inst.class_name}</strong> → {inst.path}
+                </p>
+                {inst.properties?.Source && (
+                  <pre style={styles.code}>{inst.properties.Source}</pre>
+                )}
+              </div>
+            ))}
             <p style={styles.hint}>
               En attente que le plugin Roblox Studio la recupere...
             </p>
