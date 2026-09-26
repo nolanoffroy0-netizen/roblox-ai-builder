@@ -2,13 +2,15 @@ import { setPendingCommand } from "../../lib/kv";
 
 const SYSTEM_PROMPT = `Tu es un assistant specialise en developpement Roblox (Luau).
 On te donne une indication en francais decrivant une fonctionnalite de jeu a creer.
-Reponds UNIQUEMENT avec un objet JSON valide, sans texte autour, sans balises markdown, au format exact :
+Reponds UNIQUEMENT avec un objet JSON valide, sans texte autour, sans balises markdown, sans backticks, au format exact :
 {
   "explication": "courte explication en francais de ce que fait le script",
   "instance_path": "chemin ou creer le script, ex: ServerScriptService/MonScript",
   "script_type": "Script" ou "LocalScript" ou "ModuleScript",
   "code": "le code Luau complet, en texte brut avec des \\n pour les retours a la ligne"
 }`;
+
+const GROQ_MODEL = "llama-3.3-70b-versatile";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -20,35 +22,36 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Le champ 'instruction' est requis" });
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: "ANTHROPIC_API_KEY manquante sur le serveur" });
+  if (!process.env.GROQ_API_KEY) {
+    return res.status(500).json({ error: "GROQ_API_KEY manquante sur le serveur" });
   }
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
+        model: GROQ_MODEL,
+        temperature: 0.4,
         max_tokens: 2000,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: instruction }],
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: instruction },
+        ],
       }),
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      return res.status(502).json({ error: "Erreur API Claude", detail: errText });
+      return res.status(502).json({ error: "Erreur API Groq", detail: errText });
     }
 
     const data = await response.json();
-    const rawText = data.content
-      .map((block) => (block.type === "text" ? block.text : ""))
-      .join("");
+    const rawText = data.choices?.[0]?.message?.content || "";
 
     let parsed;
     try {
